@@ -282,12 +282,16 @@ server <- function(input, output, session) {
       )
   })
 
-  filtered_lab_data <- reactive({df <- lab_data()[trimws(tolower(lab_data()$method)) == trimws(tolower(input$method)), ]
+  filtered_lab_data <- reactive({
+    # req(global$lab_data)
+    df <- lab_data()[trimws(tolower(lab_data()$method)) == trimws(tolower(input$method)), ]
   df <- df[order(df$PT_test_date, decreasing = TRUE), ]
   return(df)
   })
 
-  lab_data_2 <- reactive({df <- lab_data()
+  lab_data_2 <- reactive({
+  # req(global$lab_data)
+  df <- lab_data()
   df <- df[order(df$PT_test_date, decreasing = TRUE), ]
   return(df)
   })
@@ -406,12 +410,26 @@ server <- function(input, output, session) {
     ### compare last year's PTs (even failing PTs) to this year's to identify any missing methods
     ### which combinations of lab name and method are missing in current year
     current_year_name_methods  <- paste0(lab_method_summary$Laboratory.Name, '_', lab_method_summary$method)
+    # print(current_year_name_methods)
+    # print('\n1\n')
     year_ago_name_methods      <- paste0(lab_method_summary_yearago$Laboratory.Name, '_', lab_method_summary_yearago$method)
+    # print(year_ago_name_methods)
+    # print('\n2\n')
+    # save(list = c('current_year_name_methods', 'year_ago_name_methods'), file= 'test.RData') # load('inst/dashboard_test02/test.RData')
     # setdiff(year_ago_name_methods, current_year_name_methods) # methods with PTs from previous year but no PTs this year
-    lab_method_missing_methods <- data.frame(comb = setdiff(year_ago_name_methods, current_year_name_methods) , lab = NA, method = NA)
-    lab_method_missing_methods$lab    <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 1)
-    lab_method_missing_methods$method <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 2)
-
+    if (length(base::setdiff(year_ago_name_methods, current_year_name_methods)) > 0) {
+      lab_method_missing_methods <- data.frame(comb = base::setdiff(year_ago_name_methods, current_year_name_methods), lab = NA, method = NA)
+      print(lab_method_missing_methods)
+      print('\n3\n')
+      lab_method_missing_methods$lab    <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 1)
+      lab_method_missing_methods$method <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 2)
+    } else {
+      ### if all methods are identical between years, set all to NA.
+      lab_method_missing_methods <- data.frame(comb = NA, lab = NA, method = NA)
+      }
+    # print(lab_method_missing_methods)
+    # print('\n3\n')
+    
     # Determine marker colors and shapes
     marker_shapes <- sapply(locations()$Laboratory.Name, function(name) {
       ### large points: a failing method in the past year concerning.
@@ -422,6 +440,7 @@ server <- function(input, output, session) {
         return(10)   # large points: at least one failing PT
       }
     })
+    # print(marker_shapes)
 
     marker_colors <- sapply(locations()$Laboratory.Name, function(name) {
       lab_rows <- lab_summary_tmp[(lab_summary_tmp$Laboratory.Name == name), ]

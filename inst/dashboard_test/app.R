@@ -217,9 +217,16 @@ server <- function(input, output, session) {
     current_year_name_methods  <- paste0(lab_method_summary$Laboratory.Name, '_', lab_method_summary$method)
     year_ago_name_methods      <- paste0(lab_method_summary_yearago$Laboratory.Name, '_', lab_method_summary_yearago$method)
     # setdiff(year_ago_name_methods, current_year_name_methods) # methods with PTs from previous year but no PTs this year
-    lab_method_missing_methods <- data.frame(comb = setdiff(year_ago_name_methods, current_year_name_methods) , lab = NA, method = NA)
-    lab_method_missing_methods$lab    <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 1)
-    lab_method_missing_methods$method <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 2)
+    if (length(base::setdiff(year_ago_name_methods, current_year_name_methods)) > 0) {
+      lab_method_missing_methods <- data.frame(comb = base::setdiff(year_ago_name_methods, current_year_name_methods), lab = NA, method = NA)
+      print(lab_method_missing_methods)
+      print('\n3\n')
+      lab_method_missing_methods$lab    <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 1)
+      lab_method_missing_methods$method <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 2)
+    } else {
+      ### if all methods are identical between years, set all to NA.
+      lab_method_missing_methods <- data.frame(comb = NA, lab = NA, method = NA)
+    }
 
     # Determine marker colors and shapes
     marker_shapes <- sapply(locations$Laboratory.Name, function(name) {
