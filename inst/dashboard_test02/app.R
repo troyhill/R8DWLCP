@@ -30,7 +30,7 @@ ui <- page_navbar(
   nav_panel("Summarize by method", "Proficiency test results: Method summaries",
             dashboardPage(
   dashboardHeader(title = ""),
-  dashboardSidebar(selectInput("method", "Select Method", choices = unique(method_data$method))#,
+  dashboardSidebar(selectInput("method", "Select Method", choices = unique(method_data$method)) # unique(method_data$method))#,
                    # checkboxInput("recentYear", "Show data from the most recent year", FALSE)
                    ),
   dashboardBody(
@@ -419,8 +419,8 @@ server <- function(input, output, session) {
     # setdiff(year_ago_name_methods, current_year_name_methods) # methods with PTs from previous year but no PTs this year
     if (length(base::setdiff(year_ago_name_methods, current_year_name_methods)) > 0) {
       lab_method_missing_methods <- data.frame(comb = base::setdiff(year_ago_name_methods, current_year_name_methods), lab = NA, method = NA)
-      print(lab_method_missing_methods)
-      print('\n3\n')
+      # print(lab_method_missing_methods)
+      # print('\n3\n')
       lab_method_missing_methods$lab    <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 1)
       lab_method_missing_methods$method <- sapply(X = strsplit(lab_method_missing_methods$comb, split = '_'), '[[', 2)
     } else {
