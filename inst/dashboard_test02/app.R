@@ -31,18 +31,7 @@ method_vec <- c("EPA Method 1604", "Colilert Test", "Colisure Test", "EPA Method
 
 
 ui <- page_navbar(
-  nav_panel("Summarize by method", "Proficiency test results: Method summaries",
-            dashboardPage(
-  dashboardHeader(title = ""),
-  dashboardSidebar(selectInput("method", "Select Method", choices = method_vec) #choices = unique(method_data$method))
-                   # checkboxInput("recentYear", "Show data from the most recent year", FALSE)
-                   ),
-  dashboardBody(
-    fluidRow(leafletOutput("map", width = "700px", height = "400px"),
-             column(width = 8, DT::DTOutput("table1"))
-    ))
-)),
-nav_panel("Summarize by Laboratory", "Proficiency test results: Lab summaries",
+  nav_panel("Summarize by Laboratory", "Proficiency test results: Lab summaries",
           dashboardPage(
             dashboardHeader(title = ""), dashboardSidebar(disable = TRUE, collapsed = TRUE),
             dashboardBody(
@@ -52,6 +41,18 @@ nav_panel("Summarize by Laboratory", "Proficiency test results: Lab summaries",
               )
             )
           )),
+  nav_panel("Summarize by method", "Proficiency test results: Method summaries",
+            dashboardPage(
+              dashboardHeader(title = ""),
+              dashboardSidebar(selectInput("method", "Select Method", choices = method_vec) #choices = unique(method_data$method))
+                               # checkboxInput("recentYear", "Show data from the most recent year", FALSE)
+              ),
+              dashboardBody(
+                fluidRow(leafletOutput("map", width = "700px", height = "400px"),
+                         column(width = 8, DT::DTOutput("table1"))
+                ))
+            )),
+  
 nav_panel("Manual file upload", "File upload menu (optional)",
           # Sidebar layout with input and output definitions ----
           # fluidPage(
