@@ -20,7 +20,11 @@ library(ggplot2)
 # load_script <- system.file("extdata", "script_load_data_20250715.R", package = "R8DWLCP")
 # source(load_script)
 
-
+method_vec <- c("EPA Method 1604", "Colilert Test", "Colisure Test", "EPA Method 334.0", 
+                "SM 4500-Cl G", "EPA Method 524.2", "EPA Method 551.1", "EPA Method 200.8", 
+                "EPA Method 200.9", "EPA Method 300.0", "EPA Method 353.2", "EPA Method 200.9", 
+                "EPA Method 524.2", "EPA Method 525.2", "EPA Method 507", "EPA Method 903.0", 
+                "EPA Method 904.0", "EPA Method 908.0")
 
 # ui ----------------------------------------------------------------------
 
@@ -30,7 +34,7 @@ ui <- page_navbar(
   nav_panel("Summarize by method", "Proficiency test results: Method summaries",
             dashboardPage(
   dashboardHeader(title = ""),
-  dashboardSidebar(selectInput("method", "Select Method", choices = unique(method_data$method)) # unique(method_data$method))#,
+  dashboardSidebar(selectInput("method", "Select Method", choices = method_vec) #choices = unique(method_data$method))
                    # checkboxInput("recentYear", "Show data from the most recent year", FALSE)
                    ),
   dashboardBody(
