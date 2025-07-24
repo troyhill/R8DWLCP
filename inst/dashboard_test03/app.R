@@ -106,7 +106,7 @@ nav_panel("Manual file upload", "File upload menu (optional)",
 
 
 server <- function(input, output, session) {
-  global <- reactiveValues()
+  global <- reactiveValues(target_location = NULL)
   
   current_date <- Sys.Date()
   one_year_ago <- current_date - 365
@@ -307,6 +307,7 @@ server <- function(input, output, session) {
 
 
   output$map <- renderLeaflet({
+    ### map for method pane
     current_date <- Sys.Date()
     one_year_ago <- current_date - 365
 
@@ -375,6 +376,7 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$map_marker_click, {
+    ### action when a lab is selected in the method pane
     click <- input$map_marker_click
     selected_location <- locations()[locations()$lat == click$lat & locations()$long == click$lng, ]
     # selected_lab_data <- lab_data[(lab_data$laboratory_name == selected_location$laboratory_name) & (lab_data$PT_test_date >= one_year_ago), ] # lab_data[lab_data$laboratory_name == selected_location$laboratory_name, ]
@@ -388,7 +390,7 @@ server <- function(input, output, session) {
       selected_lab_data <- selected_lab_data[order(selected_lab_data$PT_test_date, decreasing = TRUE), ]
       if(!exists('selected_lab_data')) {
         selected_lab_data <- NA
-    }
+      } 
 
     output$table1 <- DT::renderDT({
       selected_lab_data
@@ -396,6 +398,7 @@ server <- function(input, output, session) {
   })
 
   output$map2 <- renderLeaflet({
+    ### map for lab-focused pane
     # lab_summary_tmp[order(lab_summary_tmp$PT_test_date, decreasing = TRUE), ]
 
     lab_summary_tmp <- plyr::ddply(lab_data_2()[lab_data_2()$PT_test_date >= one_year_ago, ], c('laboratory_name'),
@@ -507,6 +510,7 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$map2_marker_click, {
+    ### action when a lab is selected in the lab pane
     click <- input$map2_marker_click
     selected_location <- locations()[locations()$lat == click$lat & locations()$long == click$lng, ]
     target_loc <- paste0(selected_location$laboratory_name, ' ', selected_location$laboratory_location)
@@ -514,6 +518,7 @@ server <- function(input, output, session) {
     selected_lab_data <- lab_data_2()[grepl(x = paste0(lab_data_2()$laboratory_name, ' ', lab_data_2()$laboratory_location), pattern = target_loc), ]
     selected_lab_data <- selected_lab_data[order(selected_lab_data$PT_test_date, decreasing = TRUE), ]
     selected_lab_data$category <- method_data()$category[match(selected_lab_data$method, method_data()$method)]
+    
 
     # if (input$recentYear) { ### not working; table isn't updating
     #   # Filter data to show only the most recent year
@@ -532,11 +537,17 @@ server <- function(input, output, session) {
         # )
       })
     }
+    
+    ### attempt to make target location available to markdown report
+    # global$target_location(target_loc) #list(lat = click$lat, lon = click$lng, id = click$id)
+    # print(global$target_location)
+    
     output$table2 <- DT::renderDT({
       selected_lab_data
     })
   })
-
+  
+  
   output$contents <- renderTable({
     ### manual file upload.
     ### https://stackoverflow.com/questions/38064038/reading-an-rdata-file-into-shiny-application
@@ -562,35 +573,23 @@ server <- function(input, output, session) {
       return(lab_data)
     }
     output$files <- renderTable(input$files_all)
-    # output$data <- list(lab_data    = lab_data,
-    #                method_data = method_data,
-    #                locations   = locations
-    #                )
-    # output$files <- renderTable(list(lab_data    = lab_data,
-    #                                                 method_data = method_data,
-    #                                                 locations   = locations
-    #                                                 ))
   })
   
+  facility_data <- reactive({
+    ### react to map clicks on the lab-level tab 
+    req(input$map2_marker_click)
+    click <- input$map2_marker_click
+    selected_location <- locations()[locations()$lat == click$lat & locations()$long == click$lng, ]
+    target_loc <- paste0(selected_location$laboratory_name, ' ', selected_location$laboratory_location)
+    selected_lab_data <- lab_data_2()[grepl(x = paste0(lab_data_2()$laboratory_name, ' ', lab_data_2()$laboratory_location), pattern = target_loc), ]
+    selected_lab_data <- selected_lab_data[order(selected_lab_data$PT_test_date, decreasing = TRUE), ]
+    selected_lab_data$category <- method_data()$category[match(selected_lab_data$method, method_data()$method)]
+    selected_lab_data <- selected_lab_data[order(selected_lab_data$PT_test_date, decreasing = TRUE), ]
+    return(selected_lab_data)
+  })
+
+  
   output$report <- downloadHandler(
-    # For PDF output, change this to "report.pdf"
-    # click <- input$map2_marker_click
-    # selected_location <- locations()[locations()$lat == click$lat & locations()$long == click$lng, ]
-    # target_loc <- paste0(selected_location$laboratory_name, ' ', selected_location$laboratory_location)
-    if(exists('input$map2_marker_click')) {
-      click <- input$map2_marker_click
-      selected_location <- locations()[locations()$lat == click$lat & locations()$long == click$lng, ]
-      lab_loc <- paste0(selected_location$laboratory_name, ' ', selected_location$laboratory_location)
-      selected_lab_data <- lab_data_2()[grepl(x = paste0(lab_data_2()$laboratory_name, ' ', lab_data_2()$laboratory_location), pattern = lab_loc), ]
-      selected_lab_data <- selected_lab_data[order(selected_lab_data$PT_test_date, decreasing = TRUE), ]
-      lab_methods    <- paste0(unique(selected_lab_data$method), collapse = ', ')
-      n  <- length(unique(selected_lab_data$method))
-    } else {
-      lab_loc     <-  'No facility selected'
-      lab_methods    <- "No methods"
-      n  <- 10
-    },
-    
     filename = "report.docx",
     content = function(file) {
       # Copy the report file to a temporary directory before processing it, in
@@ -600,9 +599,8 @@ server <- function(input, output, session) {
       file.copy("markdown.Rmd", tempReport, overwrite = TRUE)
 
       # Set up parameters to pass to Rmd document
-      params <- list(n = n,
-                     facility = lab_loc,
-                     lab_methods  = lab_methods) 
+      params <- list(facility_list = facility_data()
+                       )
       # Knit the document, passing in the `params` list, and eval it in a
       # child of the global environment (this isolates the code in the document
       # from the code in this app).
