@@ -1,0 +1,40 @@
+---
+output: word_document
+always_allow_html: true
+params:
+  facility_list: NULL
+---
+
+---
+title: "Pre-Audit Laboratory Summary Report: `r params$facility_list$laboratory_name[1]`"
+
+subtitle: "Generated on `r format(Sys.Date(), '%B %d, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+## Proficiency test summary
+
+In the year since `r format(Sys.Date(), '%B %d, %Y')`, `r params$facility_list$laboratory_name[1]` has submitted proficiency test data for the following methods:
+
+```{r bulletlist, results = "asis", echo = FALSE}
+my_vector <- unique(params$facility_list$method)
+cat(paste("* ", my_vector), sep = "\n")
+```
+
+
+Current and historic proficiency test data look as follows:
+
+```{r, echo = FALSE, fig.height=6, fig.width=6}
+library(ggplot2)
+ggplot(params$facility_list, aes(x = PT_test_date, y = PT_result, col  = PT_result)) + # Customize your plot
+          facet_wrap(category ~ method) + theme_bw() +
+          geom_point() + scale_color_manual(values = c("Fail" = "red", "Pass" = "green")) +
+          labs(y = 'Proficiency test result', x = '', col = 'Test result',
+               title = paste("Proficiency test results for", params$facility_list$laboratory_name[1]))
+
+```
