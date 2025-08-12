@@ -102,7 +102,7 @@ ui <- page_navbar(
                         )
                         ),
               nav_panel("Audit timeline tool", 
-                        selectInput("flowchart", "Select audit outcome", choices = c('Certified', 'Downgrade', 'Not Certified')),
+                        selectInput("flowchart", "Select audit determination", choices = c('Certified', 'Downgrade', 'Not Certified')),
                         h3('TBD'),
                         fluidPage(
                           tags$head(
@@ -804,7 +804,27 @@ server <- function(input, output, session) {
 
   
   output$mermaidChart <- DiagrammeR::renderGrViz({
-    DiagrammeR::grViz("
+    if(input$flowchart == 'Certified') {
+        DiagrammeR::grViz("
+digraph {
+      graph [layout = dot, rankdir = TB]
+      node [shape = box, style = filled, color = lightblue]
+      node [fontname='Calibri'];
+      edge [fontname='Calibri'];
+       A[label = 'Regional Lab concludes on-site portion of audit']
+       B[label = 'R8 Lab Manager briefing.']
+       C[label = 'LSASD LT briefing.\nOutcome:\nConsensus recommendation.']
+       D[label = 'Status Determination: Certified']
+       E[label = 'Audit complete.\nFacility Manager sent audit report and status via official letter:\nCertified']
+       
+       A -> B
+       B -> C [label = '&lt;5 business days from on-site audit']
+       C -> D
+       D -> E [label = '&lt;45 days from on-site audit']
+}
+")
+    } else {
+        DiagrammeR::grViz("
     digraph {
       graph [layout = dot, rankdir = TB]
       node [shape = box, style = filled, color = lightblue]
@@ -822,7 +842,9 @@ server <- function(input, output, session) {
       D -> E
     }
     ")
-})
+      }
+  })
+
 }
 
 
