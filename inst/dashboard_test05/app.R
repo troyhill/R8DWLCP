@@ -185,26 +185,23 @@ server <- function(input, output, session) {
   
   if(!exists('input$lab_data')) {
     
-    path_tst <- getwd()
-    ### the DW LabCert sharepoint folder should be added to the user's OneDrive
-    ### and accessible via file browser.
-    ### loading an R package makes getwd return something in AppData instead of 
-    ### the file directory chain observed during testing.
-    ### The default behavior is to set wd to documents.
-    path_tst <- gsub(x = path_tst, pattern = 'AppData', replacement = 'OneDrive - Environmental Protection Agency (EPA)/')
-    path_components <- c(as.list(strsplit(x = path_tst, split = '/')[[1]][1:4]),
-                         'R8 All LSASD - Region 8 Lab - DWLabCert',
-                         'Work_Instruction',
-                         'test-data')
-    path_begin   <- do.call(file.path, as.list(path_components))
-    output$text1 <- renderText(paste0("Note: R is looking for data files in ", path_begin))
+    site <- Microsoft365R::get_sharepoint_site(site_url="https://usepa.sharepoint.com/sites/R8AllLSASD-Region8Lab")
     
-    if (dir.exists(path_begin)) {
-      file_lst   <- list.files(path_begin, recursive = TRUE, full.names = TRUE)
+    if (exists('site')) {
+      my_drive <- site$get_drive()
+      main_dir <- "Region 8 Lab/DWLabCert/Work_Instruction/test-data"
+      file_lst <- site$get_drive()$list_items(main_dir)
       
-      locations_path   <- sort(grep(x = file_lst, pattern = 'data_lab_list', value = TRUE), decreasing = TRUE)[1] 
-                              #grep(x = file_lst, pattern = 'data_lab_list', value = TRUE)[1]
-      dat_loc        <- read.csv(locations_path)
+      locations_path <- file.path(main_dir, sort(grep(x = file_lst$name, pattern = 'data_lab_list_', value = TRUE), decreasing = TRUE)[1])
+      dat_loc        <- as.data.frame(my_drive$load_dataframe(path = locations_path, show_col_types = FALSE))
+      dat_loc        <- dat_loc[!is.na(dat_loc$full_name), ]
+      
+      methods_path <- file.path(main_dir, sort(grep(x = file_lst$name, pattern = 'data_NPDWS_methods_', value = TRUE), decreasing = TRUE)[1])
+      dat_methods  <- as.data.frame(my_drive$load_dataframe(path = methods_path, show_col_types = FALSE))
+      
+      pt_path <- file.path(main_dir, sort(grep(x = file_lst$name, pattern = 'data_proficiency_test_', value = TRUE), decreasing = TRUE)[1])
+      dat1  <- as.data.frame(my_drive$load_dataframe(path = pt_path, show_col_types = FALSE))
+      
       if(all(c("lat", "long", "Region", "laboratory_name", "laboratory_location") %in% names(dat_loc))) {
         dat_loc      <- dat_loc[grepl(x = dat_loc$Region, pattern = '8'), ]
         dat_loc      <- dat_loc[!is.na(x = dat_loc$lat), ]
@@ -214,8 +211,6 @@ server <- function(input, output, session) {
         output$text2 <- renderText(c('WARNING: Lab location dataset should have the following column names:<br>', paste0(c("lat", "long", "Region", "laboratory_name", "laboratory_location"), collapse = ', ')))
         global$locations <- NULL
       }
-      
-      dat_methods <- read.csv(sort(grep(x = file_lst, pattern = 'data_NPDWS_methods_', value = TRUE), decreasing = TRUE)[1])
       if(all(c("method", "common_name", "category") %in% names(dat_methods))) {
         global$method_data <- dat_methods
         output$text3 <- renderText( "NPDWS methods found in CSV:")
@@ -223,8 +218,6 @@ server <- function(input, output, session) {
         output$text3 <- renderText(c('WARNING: Method file should have the following column names:<br>', paste0(c("method", "common_name", "category"), collapse = ', ')))
         global$method_data <- NULL
       }
-      
-      dat1 <- read.csv(sort(grep(x = file_lst, pattern = "data_proficiency_test", value = TRUE), decreasing = TRUE)[1])
       if(all(c('laboratory_name', 'laboratory_location', 'method', 'PT_result', 'PT_test_date') %in% names(dat1))) {
         date_tmp <- gsub(as.character(dat1$PT_test_date), pattern = '/| ', replacement = '-')
         dat1$PT_test_date <- as.Date(as.character(date_tmp), format = '%m-%d-%Y')
@@ -237,6 +230,60 @@ server <- function(input, output, session) {
         global$lab_data <- NA
       }
     }
+    
+    
+    # path_tst <- getwd()
+    # ### the DW LabCert sharepoint folder should be added to the user's OneDrive
+    # ### and accessible via file browser.
+    # ### loading an R package makes getwd return something in AppData instead of 
+    # ### the file directory chain observed during testing.
+    # ### The default behavior is to set wd to documents.
+    # path_tst <- gsub(x = path_tst, pattern = 'AppData', replacement = 'OneDrive - Environmental Protection Agency (EPA)/')
+    # path_components <- c(as.list(strsplit(x = path_tst, split = '/')[[1]][1:4]),
+    #                      'R8 All LSASD - Region 8 Lab - DWLabCert',
+    #                      'Work_Instruction',
+    #                      'test-data')
+    # path_begin   <- do.call(file.path, as.list(path_components))
+    # output$text1 <- renderText(paste0("Note: R is looking for data files in ", path_begin))
+    # 
+    # if (dir.exists(path_begin)) {
+    #   file_lst   <- list.files(path_begin, recursive = TRUE, full.names = TRUE)
+    #   
+    #   locations_path   <- sort(grep(x = file_lst, pattern = 'data_lab_list', value = TRUE), decreasing = TRUE)[1] 
+    #                           #grep(x = file_lst, pattern = 'data_lab_list', value = TRUE)[1]
+    #   dat_loc        <- read.csv(locations_path)
+    #   if(all(c("lat", "long", "Region", "laboratory_name", "laboratory_location") %in% names(dat_loc))) {
+    #     dat_loc      <- dat_loc[grepl(x = dat_loc$Region, pattern = '8'), ]
+    #     dat_loc      <- dat_loc[!is.na(x = dat_loc$lat), ]
+    #     output$text2 <- renderText( "Laboratory locations from input CSV:")
+    #     global$locations <- dat_loc
+    #   } else {
+    #     output$text2 <- renderText(c('WARNING: Lab location dataset should have the following column names:<br>', paste0(c("lat", "long", "Region", "laboratory_name", "laboratory_location"), collapse = ', ')))
+    #     global$locations <- NULL
+    #   }
+    #   
+    #   dat_methods <- read.csv(sort(grep(x = file_lst, pattern = 'data_NPDWS_methods_', value = TRUE), decreasing = TRUE)[1])
+    #   if(all(c("method", "common_name", "category") %in% names(dat_methods))) {
+    #     global$method_data <- dat_methods
+    #     output$text3 <- renderText( "NPDWS methods found in CSV:")
+    #   } else {
+    #     output$text3 <- renderText(c('WARNING: Method file should have the following column names:<br>', paste0(c("method", "common_name", "category"), collapse = ', ')))
+    #     global$method_data <- NULL
+    #   }
+    #   
+    #   dat1 <- read.csv(sort(grep(x = file_lst, pattern = "data_proficiency_test", value = TRUE), decreasing = TRUE)[1])
+    #   if(all(c('laboratory_name', 'laboratory_location', 'method', 'PT_result', 'PT_test_date') %in% names(dat1))) {
+    #     date_tmp <- gsub(as.character(dat1$PT_test_date), pattern = '/| ', replacement = '-')
+    #     dat1$PT_test_date <- as.Date(as.character(date_tmp), format = '%m-%d-%Y')
+    #     dat1$PT_test_date[is.na(dat1$PT_test_date)] <- as.Date(date_tmp[is.na(dat1$PT_test_date)], format = '%Y-%m-%d')
+    #     dat1$PT_test_date[is.na(dat1$PT_test_date)] <- as.Date(date_tmp[is.na(dat1$PT_test_date)], format = '%d-%m-%Y')
+    #     global$lab_data <- dat1 # FROM HERE ON USE: global$data
+    #     output$text1 <- renderText( "Proficiency test data preview")
+    #   } else {
+    #     output$text1 <- renderText(c('WARNING: Proficiency test dataset should have the following column names:<br>', paste0(c('laboratory_name', 'laboratory_location', 'method', 'PT_result', 'PT_test_date'), collapse = ', ')))
+    #     global$lab_data <- NA
+    #   }
+    # }
     
   }
   
@@ -802,7 +849,7 @@ server <- function(input, output, session) {
     } 
     
     output$table_audits <- DT::renderDT({
-      selected_audit_data[, c("method_name", "method_category", "expiration_date", "current_status", "lab_name")]
+      selected_audit_data[!is.na(selected_audit_data$current_status), c("method_name", "method_category", "expiration_date", "current_status", "lab_name")]
     })
   })
 
